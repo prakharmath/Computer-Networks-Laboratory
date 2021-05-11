@@ -1,0 +1,198 @@
+/*Gaurav Goyal 17CS30013 Lab_4 PC_87*/
+
+ [1]
+
+ select S.RollNo, S.Name, S.YearOfAdmission
+ from Student S, Student T, Friend F
+ where S.RollNo=F.OwnRoll and F.FriendRoll=T.RollNo and T.Name like '%Amit%' ;
+
+Review: //All good//
+
+
+
+
+ [2]
+
+ select Title as Title
+ from Movie
+ where MID not in (select distinct MID from Rating) ;
+
+Review: //All good//
+
+
+
+
+[3]
+
+with Rating1(DirectorName, Title, MID, HighestTotalRating) as
+	(
+		select M.DirectorName, M.Title, M.MID, R.HighestTotalRating
+		from Movie M, 	(
+							select MID, sum(Rating) as HighestTotalRating
+							from Rating
+							group by MID
+						) as R
+		where M.MID=R.MID
+	)
+select D.DirectorName, D.Title, D.HighestTotalRating
+from Rating1 D
+where D.HighestTotalRating >= all 	(
+										select E.HighestTotalRating
+										from Rating1 as E
+										where D.DirectorName like E.DirectorName
+									) ;
+
+Review: //All good//
+
+
+
+
+[4]
+
+select S.RollNo, S.YearOfAdmission, T.RollNo, T.YearOfAdmission, M.Title, R.Rating
+from Student S, Student T, Movie M, Rating R, Rating P
+where S.RollNo=R.RollNo and T.RollNo=P.RollNo and R.MID=P.MID and R.Rating=P.Rating and R.MID=M.MID ;  
+
+Review: //All good//
+
+
+
+
+[5]
+
+select avg(NumberOfFriends)
+from(
+		select OwnRoll, count(FriendRoll) as NumberOfFriends
+		from Friend
+		group by OwnRoll 
+	) ;
+
+Review: //Alias Missing for derived table// 
+
+Correct Code:
+//select avg(P.NumberOfFriends)
+from(
+		select OwnRoll, count(FriendRoll) as NumberOfFriends
+		from Friend
+		group by OwnRoll 
+	) as P ;//
+
+
+
+
+[6]
+with AvgRating(RollNo, AverageRating) as
+	(
+		select RollNo, avg(Rating)
+		from Rating
+		group by RollNo
+	)
+select R1.RollNo, R1.AverageRating, R2.RollNo, R2.AverageRating
+from AvgRating R1, AvgRating R2, Friend F
+where R1.AverageRating>R2.AverageRating and R1.RollNo=F.OwnRoll and R2.RollNo=F.FriendRoll ;
+
+Review: //All good//
+
+
+
+
+[7]
+
+select M1.Title, M1.YearOfRelease, S1.RollNo, S1.YearOfAdmission
+from Student S1, Movie M1, Rating R2,	(
+											select R.MID, count(Rating)
+											from Rating R, Movie M, Student S
+											where R.MID=M.MID and R.RollNo=S.RollNo and M.YearOfRelease<S.YearOfAdmission
+											group by R.MID
+											having count(Rating)>=5
+										) as R1
+where R1.MID=R2.MID and R2.MID=M1.MID and R2.RollNo=S1.RollNo and M1.YearOfRelease<S1.YearOfAdmission ;
+
+Review: //All good//
+
+
+
+
+[8]
+
+with MaxRating(MID, NumberOfStudentRatings) as
+	(
+		select MID, count(distinct Rating) as NumberOfStudentRatings
+		from Rating
+		group by MID
+		order by NumberOfStudentRatings desc, MID
+	)
+select M.Title, R.NumberOfStudentRatings
+from Movie M, 	(	
+					select MID, NumberOfStudentRatings
+					from(
+							MaxRating R1 
+						 	join
+						 	(
+						 		select distinct R2.NumberOfStudentRatings
+						 		from MaxRating R2
+						 		order by R2.NumberOfStudentRatings desc
+						 		LIMIT 5
+						 	) as R3
+						 	on R3.NumberOfStudentRatings=R1.NumberOfStudentRatings
+						)
+				) as R
+where R.MID=M.MID
+order by R.NumberOfStudentRatings desc, M.Title ;
+
+Review: //Error//
+
+
+
+
+[9]
+
+with MaxRating(MID, NumberOfStudentRatings) as
+	(
+		select MID, count(distinct Rating) as NumberOfStudentRatings
+		from Rating
+		group by MID
+		order by NumberOfStudentRatings desc, MID
+	)
+select M.Title, R1.NumberOfStudentRatings
+from Movie M, MaxRating R1, (
+								select R3.NumberOfStudentRatings
+								from(
+										select distinct R2.NumberOfStudentRatings
+						 				from MaxRating R2
+						 				order by R2.NumberOfStudentRatings desc
+						 				LIMIT 5
+									) as R3
+								order by NumberOfStudentRatings
+								LIMIT 1 OFFSET 4
+							) as R4	
+where R1.NumberOfStudentRatings=R4.NumberOfStudentRatings and R1.MID=M1.MID
+order by M.Title ;
+
+Review:  //M.MID in place of M1.MID in where clause//
+
+
+
+
+[10]
+
+select S1.RollNo, S1.Name, S2.RollNo, S2.Name
+from Student S1, Student S2
+where S1.RollNo!=S2.RollNo and exists 	(
+											(
+												select distinct R1.MID
+												from Rating R1
+												where R1.RollNo=S1.RollNo
+											)
+											intersect
+											(
+												select distinct R2.MID
+												from Rating R2
+												where R2.RollNo=S2.RollNo
+											)
+										) ;
+
+Review: //Error at LineNo 9//??
+
+
+
